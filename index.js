@@ -1,17 +1,28 @@
+/* basic imports */
 const express = require('express');
 const app = express();
+/* mongodb related imports */
 const mongoose = require('mongoose');
 const Room = require('./models/room');
-const cors = require('cors');
-const cron = require('node-cron');
+const User = require('./models/user');
+
+/* donteng import for .env file */
 const dotenv = require('dotenv');
+dotenv.config();
+/* Cors imports (for cross origin request)*/
+const cors = require('cors');
+/* Cron import (2 hour server side check) */
+const cron = require('node-cron');
+/* brypt import for enctypting passwords */
+const bcrypt = require('bcrypt');
+const salt = bcrypt.genSaltSync(10);
+/* Socket.io related imports */
 const http = require('http');
 const server = http.createServer(app);
 const { Server } = require('socket.io');
-dotenv.config();
 const port = process.env.SOCKETIO_PORT || 8080
-app.set('port', port);
 const socketiopath = process.env.SOCKETIO_PATH || ''
+app.set('port', port);
 
 app.use(cors());
 app.use(express.json())
@@ -43,6 +54,41 @@ io.on('connection', socket => {
 app.get('/api', (req, res)=>{
     res.send("hi this is root of api 😎")
 })
+
+app.post('/api/signup', async (req,res) => {
+    mongoose.connect(process.env.MONGODB_CONNECTION_STRING);
+    const {username, password} = req.body;
+    try {
+        const hashedpw = bcrypt.hashSync(password, salt);
+        const newUser = await User.create({
+            username: username,
+            password: hashedpw,
+        });
+        res.json(newUser);
+    } catch (error) {
+        res.json({error_message: error});
+    }
+})
+
+app.post('/api/login', async (req,res) => {
+    mongoose.connect(process.env.MONGODB_CONNECTION_STRING);
+    const {username, password} = req.body;
+    try {
+        const userDoc = await User.findOne({username: username});
+        if(userDoc === null){
+            res.status(400).json('User Does not Exist')
+            return;
+        }
+        const pwcompare = bcrypt.compareSync(password, userDoc.password);
+        if(pwcompare){
+            res.status(200).json(userDoc);
+        } else {
+            res.status(400).json('Wrong Credentials');
+        }
+    } catch (error) {
+        res.status(500).send(error);
+    }
+})  
 
 app.post('/api/room', async (req, res)=>{
     mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
