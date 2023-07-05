@@ -16,6 +16,8 @@ const cron = require('node-cron');
 /* brypt import for enctypting passwords */
 const bcrypt = require('bcrypt');
 const salt = bcrypt.genSaltSync(10);
+/* JWT import for authentication */
+const jwt = require('jsonwebtoken');
 /* Socket.io related imports */
 const http = require('http');
 const server = http.createServer(app);
@@ -24,7 +26,7 @@ const port = process.env.SOCKETIO_PORT || 8080
 const socketiopath = process.env.SOCKETIO_PATH || ''
 app.set('port', port);
 
-app.use(cors());
+app.use(cors({origin: true, credentials: true}));
 app.use(express.json())
 
 const io = new Server(server, {
@@ -57,12 +59,13 @@ app.get('/api', (req, res)=>{
 
 app.post('/api/signup', async (req,res) => {
     mongoose.connect(process.env.MONGODB_CONNECTION_STRING);
-    const {username, password} = req.body;
+    const {username, password, displayname} = req.body;
     try {
         const hashedpw = bcrypt.hashSync(password, salt);
         const newUser = await User.create({
             username: username,
             password: hashedpw,
+            displayname: displayname,
         });
         res.json(newUser);
     } catch (error) {
@@ -81,7 +84,12 @@ app.post('/api/login', async (req,res) => {
         }
         const pwcompare = bcrypt.compareSync(password, userDoc.password);
         if(pwcompare){
-            res.status(200).json(userDoc);
+            jwt.sign({ username:username, id:userDoc._id }, process.env.JWT_PRIVATE_KEY, {}, function(err, token) {
+                if(err){
+                    res.status(500).json({error_message: err});
+                }
+                res.cookie('token', token).json(userDoc);
+            });
         } else {
             res.status(400).json('Wrong Credentials');
         }
@@ -90,9 +98,31 @@ app.post('/api/login', async (req,res) => {
     }
 })  
 
+app.post('/api/logout', async (req,res) => {
+    res.clearCookie('token').json({message: 'Logged Out'});
+})
+
+app.post('/api/createroom', async (req, res)=>{
+    const {creater, creatername, ispublic, tags, desc} = req.body;
+    mongoose.connect(process.env.MONGODB_CONNECTION_STRING);
+    try {
+        const newRoom = await Room.create({
+            creater: creater,
+            creatername: creatername,
+            public: ispublic,
+            tag: tags,
+            desc: desc,
+            content: '',
+        })
+        res.json(newRoom);
+    } catch (error) {
+        res.status(500).json({error_message: error});
+    }
+})
+
 app.post('/api/room', async (req, res)=>{
     mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
-    const {name, tag, desc, ispublic} = req.body||{};
+    const {name, tag, desc, ispublic} = req.body;
     const newRoom = await Room.create({
         creater: name,
         public: ispublic,
