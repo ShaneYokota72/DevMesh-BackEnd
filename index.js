@@ -120,6 +120,59 @@ app.post('/api/createroom', async (req, res)=>{
     }
 })
 
+app.post('/api/loadlobby', async (req, res)=>{
+    mongoose.connect(process.env.MONGODB_CONNECTION_STRING);
+    const {myid} = req.body;
+    try {
+        const allrooms = await Room.find({public:true, creater:{$ne:myid}}).sort({createdAt:-1}).limit(6);
+        res.json(allrooms);
+    } catch (error) {
+        res.status(500).json({error_message: error});
+    }
+})
+
+app.post('/api/confirmroom', async (req,res) => {
+    mongoose.connect(process.env.MONGODB_CONNECTION_STRING);
+    const {roomid} = req.body;
+    try {
+        const room = await Room.findById(roomid);
+        if(room !== null || room !== undefined){
+            res.status(200).json(room);
+        } else {
+            res.status(404).json({message: "Room not found"});
+        }
+    } catch (error) {
+        res.status(500).json({error_message: error});
+    }
+})
+
+app.post('/api/search', async (req, res)=>{
+    mongoose.connect(process.env.MONGODB_CONNECTION_STRING);
+    const {keyword} = req.body||{};
+    const searchresult = await Room.aggregate().
+        search({            
+            index: 'searchresult',
+            text: {
+                query: keyword,
+                path: ['creater', 'tag', 'desc']
+            }
+        });
+    res.json(searchresult);
+})
+
+app.get('/api/room/:id', async (req, res) => {
+    mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
+    try {
+      const room = await Room.findById(req.params.id);
+      if (!room) {
+        return res.status(404).json({ error: 'Room not found' });
+      }
+      res.json(room.content);
+    } catch (error) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
 app.post('/api/room', async (req, res)=>{
     mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
     const {name, tag, desc, ispublic} = req.body;
@@ -140,18 +193,18 @@ app.get('/api/roomopen/:id', async (req, res)=>{
     res.json(rooms);
 })
 
-app.get('/api/room/:id', async (req, res) => {
-    mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
-    try {
-      const room = await Room.findById(req.params.id);
-      if (!room) {
-        return res.status(404).json({ error: 'Room not found' });
-      }
-      res.json(room.content);
-    } catch (error) {
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  });
+// app.get('/api/room/:id', async (req, res) => {
+//     mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
+//     try {
+//       const room = await Room.findById(req.params.id);
+//       if (!room) {
+//         return res.status(404).json({ error: 'Room not found' });
+//       }
+//       res.json(room.content);
+//     } catch (error) {
+//       res.status(500).json({ error: 'Internal server error' });
+//     }
+//   });
 
 app.put('/api/save/:id', async (req, res)=>{
     mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
@@ -166,19 +219,19 @@ app.put('/api/save/:id', async (req, res)=>{
     res.json(roomdoc);
 })
 
-app.post('/api/search', async (req, res)=>{
-    mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
-    const {keyword} = req.body||{};
-    const searchresult = await Room.aggregate().
-        search({            
-            index: 'searchresult',
-            text: {
-                query: keyword,
-                path: ['creater', 'tag', 'desc']
-            }
-        });
-    res.json(searchresult);
-})
+// app.post('/api/search', async (req, res)=>{
+//     mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
+//     const {keyword} = req.body||{};
+//     const searchresult = await Room.aggregate().
+//         search({            
+//             index: 'searchresult',
+//             text: {
+//                 query: keyword,
+//                 path: ['creater', 'tag', 'desc']
+//             }
+//         });
+//     res.json(searchresult);
+// })
 
 app.post('/api/deleteroom/:id', async (req, res)=>{
     mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
