@@ -38,18 +38,19 @@ const io = new Server(server, {
 
 io.on('connection', socket => {
     // console.log('🔥: A user connected')
-    socket.on('join-room', (roomid) => { 
+    socket.on('join-room', (roomid, name) => { 
         socket.join(roomid);
+        socket.to(roomid).emit('user-connected', name);
     })
     socket.on('send-changes', (delta, roomid) => {
         socket.to(roomid).emit('receive-changes', delta);
     })
     socket.on('send-message', (msg, roomid) => {
-        console.log("msg", msg)
+        // console.log("msg", msg)
         socket.to(roomid).emit('receive-message', msg);
     })
     socket.on('disconnect', () => {
-        // console.log('🔥: A user disconnected');
+        // console.log('🔥: A user disconnected')
     });
 })
 
@@ -69,7 +70,7 @@ app.post('/api/signup', async (req,res) => {
         });
         res.json(newUser);
     } catch (error) {
-        res.json({error_message: error});
+        res.status(400).json({error_message: error});
     }
 })
 
@@ -160,6 +161,19 @@ app.post('/api/search', async (req, res)=>{
     res.json(searchresult);
 })
 
+app.put('/api/save/:id', async (req, res)=>{
+    mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
+    const {roomid, content} = req.body || {};
+    const roomdoc = await Room.findById(roomid);
+    if(roomdoc === null){
+        res.status(404).json({message: "Room not found"});
+        return;
+    }
+    roomdoc.content = content;
+    await roomdoc.save();
+    res.json(roomdoc);
+})
+
 app.get('/api/room/:id', async (req, res) => {
     mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
     try {
@@ -167,11 +181,22 @@ app.get('/api/room/:id', async (req, res) => {
       if (!room) {
         return res.status(404).json({ error: 'Room not found' });
       }
-      res.json(room.content);
+      res.json({content:room.content, creater:room.creater});
     } catch (error) {
       res.status(500).json({ error: 'Internal server error' });
     }
-  });
+});
+
+app.delete('/api/delroom/:id', async (req, res)=>{
+    mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
+    const deleteroom = await Room.deleteOne({ _id: req.params.id});
+    if(deleteroom.deletedCount === 0){
+        res.status(400).json({message: "Room not able to delete"});
+    } else if (deleteroom.deletedCount === 1){
+        res.status(200).json({message: "Room deleted"});
+    }
+})
+
 
 app.post('/api/room', async (req, res)=>{
     mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
@@ -206,18 +231,18 @@ app.get('/api/roomopen/:id', async (req, res)=>{
 //     }
 //   });
 
-app.put('/api/save/:id', async (req, res)=>{
-    mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
-    const {roomid, content} = req.body || {};
-    const roomdoc = await Room.findById(roomid);
-    if(roomdoc === null){
-        res.status(404).json({message: "Room not found"});
-        return;
-    }
-    roomdoc.content = content;
-    await roomdoc.save();
-    res.json(roomdoc);
-})
+// app.put('/api/save/:id', async (req, res)=>{
+//     mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
+//     const {roomid, content} = req.body || {};
+//     const roomdoc = await Room.findById(roomid);
+//     if(roomdoc === null){
+//         res.status(404).json({message: "Room not found"});
+//         return;
+//     }
+//     roomdoc.content = content;
+//     await roomdoc.save();
+//     res.json(roomdoc);
+// })
 
 // app.post('/api/search', async (req, res)=>{
 //     mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
