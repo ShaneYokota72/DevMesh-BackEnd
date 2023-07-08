@@ -225,7 +225,7 @@ cron.schedule('* * 2 * * *', async () => {
 });
 
 server.listen(port, () => {
-    // console.log(`Example app listening at http://localhost:${port}`)
+    // console.log(`server listening at ${port}`)
 })
 
 app.listen(process.env.API_PORT, () => {
