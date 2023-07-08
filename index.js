@@ -38,6 +38,10 @@ const cred = {
 app.use(cors({origin: true, credentials: true}));
 app.use(express.json())
 
+app.get('/.well-known/pki-validation/0F993970707CE607CED5A73A0EA1785E.txt', (req, res) => {
+    res.sendFile('/home/ec2-user/DevMesh-backend/0F993970707CE607CED5A73A0EA1785E.txt')
+})
+
 const io = new Server(server, {
     path: socketiopath,
     cors:{
