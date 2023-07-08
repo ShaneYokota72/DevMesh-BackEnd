@@ -25,13 +25,18 @@ const { Server } = require('socket.io');
 const port = process.env.SOCKETIO_PORT || 8080
 const socketiopath = process.env.SOCKETIO_PATH || ''
 app.set('port', port);
+/* https/fs import for SSL cert/key */
+const fs = require('fs');
+const https = require('https');
+const key = fs.readFileSync('private.key');
+const cert = fs.readFileSync('cerificate.cert');
+const cred = {
+    key,
+    cert,
+}
 
 app.use(cors({origin: true, credentials: true}));
 app.use(express.json())
-
-app.get('/.well-known/pki-validation/0F993970707CE607CED5A73A0EA1785E.txt', (req, res) => {
-    res.sendFile('/Users/shaneyokota/Desktop/DevMesh/DevMesh-backend/0F993970707CE607CED5A73A0EA1785E.txt')
-})
 
 const io = new Server(server, {
     path: socketiopath,
@@ -232,9 +237,16 @@ server.listen(port, () => {
     // console.log(`server listening at ${port}`)
 })
 
+// app.listen(3000, () => {
+//     console.log('on 3000')
+//     // console.log(`Server running on port ${process.env.API_PORT}`)
+//     // console.log(`mongoose connection url: ${process.env.MONGODB_CONNECTION_STRING}`)
+// })
 app.listen(process.env.API_PORT, () => {
     // console.log(`Server running on port ${process.env.API_PORT}`)
     // console.log(`mongoose connection url: ${process.env.MONGODB_CONNECTION_STRING}`)
 })
+const httpsServer = https.createServer(cred, app);
+httpsServer.listen(process.env.API_PORT);
 
 module.exports = app;
