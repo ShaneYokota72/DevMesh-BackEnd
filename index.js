@@ -197,7 +197,6 @@ app.delete('/api/delroom/:id', async (req, res)=>{
     }
 })
 
-
 app.post('/api/room', async (req, res)=>{
     mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
     const {name, tag, desc, ispublic} = req.body;
@@ -218,62 +217,11 @@ app.get('/api/roomopen/:id', async (req, res)=>{
     res.json(rooms);
 })
 
-// app.get('/api/room/:id', async (req, res) => {
-//     mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
-//     try {
-//       const room = await Room.findById(req.params.id);
-//       if (!room) {
-//         return res.status(404).json({ error: 'Room not found' });
-//       }
-//       res.json(room.content);
-//     } catch (error) {
-//       res.status(500).json({ error: 'Internal server error' });
-//     }
-//   });
-
-// app.put('/api/save/:id', async (req, res)=>{
-//     mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
-//     const {roomid, content} = req.body || {};
-//     const roomdoc = await Room.findById(roomid);
-//     if(roomdoc === null){
-//         res.status(404).json({message: "Room not found"});
-//         return;
-//     }
-//     roomdoc.content = content;
-//     await roomdoc.save();
-//     res.json(roomdoc);
-// })
-
-// app.post('/api/search', async (req, res)=>{
-//     mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
-//     const {keyword} = req.body||{};
-//     const searchresult = await Room.aggregate().
-//         search({            
-//             index: 'searchresult',
-//             text: {
-//                 query: keyword,
-//                 path: ['creater', 'tag', 'desc']
-//             }
-//         });
-//     res.json(searchresult);
-// })
-
-app.post('/api/deleteroom/:id', async (req, res)=>{
-    mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
-    const {roomid, username} = req.body || {};
-    const deleteroom = await Room.deleteOne({ _id: roomid, creater:username });
-    if(deleteroom.deletedCount === 0){
-        res.status(200).json({message: "Room not able to delete"});
-    } else if (deleteroom.deletedCount === 1){
-        res.status(200).json({message: "Room deleted"});
-    }
-})
-
 cron.schedule('* * 2 * * *', async () => {
     mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
     console.log('running a task every two hours');
-    const onedayago = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const deleteoldrooms = await Room.deleteMany({ updatedAt: { $lt: onedayago }});
+    const twodaysago = new Date(Date.now() - 48 * 60 * 60 * 1000);
+    const deleteoldrooms = await Room.deleteMany({ updatedAt: { $lt: twodaysago }});
 });
 
 server.listen(port, () => {
