@@ -129,7 +129,8 @@ app.post('/api/login', async (req,res) => {
                 }
                 let expirationDate = new Date();
                 expirationDate.setTime(expirationDate.getTime() + (15 * 60 * 1000));
-                res.cookie('token', token, { expires: expirationDate }).json(userDoc);
+                // res.cookie('token', token, { expires: expirationDate }).json(userDoc);
+                res.cookie('token', token, { expires: expirationDate, sameSite: 'none', secure: true}).json(userDoc);
             });
         } else {
             res.status(400).json('Wrong Credentials');
