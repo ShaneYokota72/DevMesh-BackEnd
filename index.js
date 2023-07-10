@@ -18,6 +18,8 @@ const bcrypt = require('bcrypt');
 const salt = bcrypt.genSaltSync(10);
 /* JWT import for authentication */
 const jwt = require('jsonwebtoken');
+/* Cookie parser import for JWT Token cookie */
+const cookieParser = require('cookie-parser');
 /* https/fs import for SSL cert/key */
 const https = require('https');
 const fs = require('fs');
@@ -28,7 +30,14 @@ const cred = {
     cert,
 }
 /* Socket.io related imports */
+/* * * * UNCOMMENT FOR AWS * * * * * */
 const server = https.createServer(cred,app);
+/* * * * * * * * * * * * * * * * * * */
+
+/* * * * UNCOMMENT FOR LOCAL * * * * * */
+// const http = require('http');
+// const server = http.createServer(app);
+/* * * * * * * * * * * * * * * * * * */
 const { Server } = require('socket.io');
 const port = process.env.SOCKETIO_PORT || 8080
 const socketiopath = process.env.SOCKETIO_PATH || ''
@@ -36,7 +45,8 @@ app.set('port', port);
 
 
 app.use(cors({origin: true, credentials: true}));
-app.use(express.json())
+app.use(express.json());
+app.use(cookieParser());
 
 const io = new Server(server, {
     path: socketiopath,
@@ -67,6 +77,24 @@ app.get('/api', (req, res)=>{
     res.send("hi this is root of api 😎")
 })
 
+app.get('/api/auth/status', async (req,res) => {
+    const { token } = req.cookies;
+    if(token === undefined){
+        res.status(401).json({message: "not-signed-in"});
+        return;
+    } else {
+        jwt.verify(token, process.env.JWT_PRIVATE_KEY, async function(err, decoded) {
+            // console.log(decoded);
+            if(err){
+                res.status(401).json({message: "not-signed-in"});
+                return;
+            }
+            const userDoc = await User.findOne({username: decoded.username});
+            res.status(200).json(userDoc);
+        })
+    }
+})
+
 app.post('/api/signup', async (req,res) => {
     mongoose.connect(process.env.MONGODB_CONNECTION_STRING);
     const {username, password, displayname} = req.body;
@@ -87,6 +115,7 @@ app.post('/api/login', async (req,res) => {
     mongoose.connect(process.env.MONGODB_CONNECTION_STRING);
     const {username, password} = req.body;
     try {
+        // const userDoc = await User.findOne({username: username});
         const userDoc = await User.findOne({username: username});
         if(userDoc === null){
             res.status(400).json('User Does not Exist')
@@ -98,7 +127,9 @@ app.post('/api/login', async (req,res) => {
                 if(err){
                     res.status(500).json({error_message: err});
                 }
-                res.cookie('token', token).json(userDoc);
+                let expirationDate = new Date();
+                expirationDate.setTime(expirationDate.getTime() + (15 * 60 * 1000));
+                res.cookie('token', token, { expires: expirationDate }).json(userDoc);
             });
         } else {
             res.status(400).json('Wrong Credentials');
@@ -235,8 +266,15 @@ cron.schedule('* * 2 * * *', async () => {
 
 // socketio port
 server.listen(port);
+
 // api port
+/* * * * * * * * UNCOMMENT FOR AWS DEVELOPMENT * * * * * * * * */
 const httpsServer = https.createServer(cred, app);
 httpsServer.listen(process.env.API_PORT);
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* * * * * * * * UNCOMMENT FOR Local DEVELOPMENT * * * * * * * * */
+// app.listen(process.env.API_PORT);
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 module.exports = app;
