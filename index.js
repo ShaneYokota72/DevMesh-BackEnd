@@ -31,15 +31,15 @@ const cred = {
 }
 /* Socket.io related imports */
 /* * * * UNCOMMENT FOR AWS * * * * * */
-// const server = https.createServer(cred,app);
+const server = https.createServer(cred,app);
 /* * * * * * * * * * * * * * * * * * */
 
 /* * * * UNCOMMENT FOR LOCAL * * * * * */
-const http = require('http');
-const server = http.createServer(app);
+// const http = require('http');
+// const server = http.createServer(app);
 /* * * * * * * * * * * * * * * * * * */
 const { Server } = require('socket.io');
-const port = process.env.SOCKETIO_PORT || 8000//change to 8080 later. 8000 for temporary
+const port = process.env.SOCKETIO_PORT || 8080
 const socketiopath = process.env.SOCKETIO_PATH || ''
 app.set('port', port);
 
@@ -148,6 +148,7 @@ app.post('/api/logout', async (req,res) => {
     res.clearCookie('token', {
         httpOnly: true,
         secure: true,
+        sameSite: 'none',
     }).json({message: 'Logged Out'});
 })
 
@@ -277,12 +278,12 @@ server.listen(port);
 
 // api port
 /* * * * * * * * UNCOMMENT FOR AWS DEVELOPMENT * * * * * * * * */
-// const httpsServer = https.createServer(cred, app);
-// httpsServer.listen(process.env.API_PORT);
+const httpsServer = https.createServer(cred, app);
+httpsServer.listen(process.env.API_PORT);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * UNCOMMENT FOR Local DEVELOPMENT * * * * * * * * */
-app.listen(process.env.API_PORT);
+// app.listen(process.env.API_PORT);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 module.exports = app;
