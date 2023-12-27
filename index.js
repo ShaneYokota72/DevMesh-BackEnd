@@ -73,8 +73,8 @@ io.on('connection', socket => {
     });
 })
 
-// app.get('/.well-known/pki-validation/AC2C6EB4A428EFD0724F4933397F8D1D.txt', (req,res)=>{
-//     res.sendFile('/home/ec2-user/DevMesh-backend/AC2C6EB4A428EFD0724F4933397F8D1D.txt')
+// app.get('/.well-known/pki-validation/04A24C13302C61E160446ADFC3215A99.txt', (req,res)=>{
+//     res.sendFile('/home/ec2-user/DevMesh-BackEnd/04A24C13302C61E160446ADFC3215A99.txt')
 // })
 
 app.get('/api', (req, res)=>{
