@@ -34,18 +34,17 @@ const cred = {
 }
 
 
-
 /* Socket.io related imports */
 /* * * * UNCOMMENT FOR AWS * * * * * */
-// const server = https.createServer(cred,app);
+const server = https.createServer(cred,app);
 /* * * * * * * * * * * * * * * * * * */
 
 /* * * * UNCOMMENT FOR LOCAL * * * * * */
-const http = require('http');
-const server = http.createServer(app);
+// const http = require('http');
+// const server = http.createServer(app);
 /* * * * * * * * * * * * * * * * * * */
 const { Server } = require('socket.io');
-const port = process.env.SOCKETIO_PORT || 8000
+const port = process.env.SOCKETIO_PORT || 8080
 const socketiopath = process.env.SOCKETIO_PATH || ''
 app.set('port', port);
 
@@ -342,12 +341,12 @@ server.listen(port);
 
 // api port
 /* * * * * * * * UNCOMMENT FOR AWS DEVELOPMENT * * * * * * * * */
-// const httpsServer = https.createServer(cred, app);
-// httpsServer.listen(process.env.API_PORT);
+const httpsServer = https.createServer(cred, app);
+httpsServer.listen(process.env.API_PORT);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * UNCOMMENT FOR Local DEVELOPMENT * * * * * * * * */
-app.listen(process.env.API_PORT);
+// app.listen(process.env.API_PORT);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 module.exports = app;
