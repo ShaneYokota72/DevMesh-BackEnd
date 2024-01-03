@@ -20,26 +20,32 @@ const salt = bcrypt.genSaltSync(10);
 const jwt = require('jsonwebtoken');
 /* Cookie parser import for JWT Token cookie */
 const cookieParser = require('cookie-parser');
+/* npm package for git commands */
+const simpleGit = require('simple-git');
+simpleGit().clean(simpleGit.CleanOptions.FORCE);
 /* https/fs import for SSL cert/key */
 const https = require('https');
-const fs = require('fs');
+const fs = require('fs-extra')
 const key = fs.readFileSync('private.key');
 const cert = fs.readFileSync('certificate.crt');
 const cred = {
     key,
     cert,
 }
+
+
+
 /* Socket.io related imports */
 /* * * * UNCOMMENT FOR AWS * * * * * */
-const server = https.createServer(cred,app);
+// const server = https.createServer(cred,app);
 /* * * * * * * * * * * * * * * * * * */
 
 /* * * * UNCOMMENT FOR LOCAL * * * * * */
-// const http = require('http');
-// const server = http.createServer(app);
+const http = require('http');
+const server = http.createServer(app);
 /* * * * * * * * * * * * * * * * * * */
 const { Server } = require('socket.io');
-const port = process.env.SOCKETIO_PORT || 8080
+const port = process.env.SOCKETIO_PORT || 8000
 const socketiopath = process.env.SOCKETIO_PATH || ''
 app.set('port', port);
 
@@ -267,6 +273,63 @@ app.get('/api/roomopen/:id', async (req, res)=>{
     res.json(rooms);
 })
 
+async function getFolderObject(folderPath) {
+    const folderObject = {};
+    const files = await fs.readdir(folderPath);
+  
+    for (const file of files) {
+      const filePath = `${folderPath}/${file}`;
+      const fileStats = await fs.stat(filePath);
+      // make a list of files to ignore and make it cleaner
+      if(file === ".git"){
+        continue;
+      } else if(file === "node_modules"){
+        continue;
+      } else if(file === ".DS_Store"){
+        continue;
+      }
+      if (fileStats.isDirectory()) {
+        const subfolderData = await getFolderObject(filePath);
+        folderObject[file] = subfolderData;
+      } else if (fileStats.isFile()) {
+        const fileContent = await fs.readFile(filePath, 'utf-8');
+        folderObject[file] = fileContent;
+      }
+    }
+  
+    return folderObject;
+  }
+async function deleteRepositoryFolder(repoPath) {
+    await fs.remove(repoPath);
+}
+
+async function gitclone(repoPath){
+    const git = simpleGit();
+    try{
+        const ans = await git.clone(repoPath)
+        const foldername = repoPath.split("/").pop()
+        const folderObject = await getFolderObject(foldername)
+        await deleteRepositoryFolder(foldername)
+        return folderObject
+    } catch (err){
+        console.log("error ", err)
+    }
+}
+
+app.post('/api/gitclone', async (req,res) => {
+    const {repoPath, roomid} = req.body;
+    const code = await gitclone(repoPath)
+    mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
+    const roomdoc = await Room.findById(roomid);
+    if(roomdoc === null){
+        res.status(404).json({message: "Room not found"});
+        return;
+    }
+    roomdoc.content = JSON.stringify(code);
+    await roomdoc.save();
+    res.status(200).json(roomdoc);
+})
+
 cron.schedule('* */2 * * *', async () => {
     mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
     console.log('running a task every two hours');
@@ -279,12 +342,12 @@ server.listen(port);
 
 // api port
 /* * * * * * * * UNCOMMENT FOR AWS DEVELOPMENT * * * * * * * * */
-const httpsServer = https.createServer(cred, app);
-httpsServer.listen(process.env.API_PORT);
+// const httpsServer = https.createServer(cred, app);
+// httpsServer.listen(process.env.API_PORT);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * UNCOMMENT FOR Local DEVELOPMENT * * * * * * * * */
-// app.listen(process.env.API_PORT);
+app.listen(process.env.API_PORT);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 module.exports = app;
