@@ -20,6 +20,9 @@ const salt = bcrypt.genSaltSync(10);
 const jwt = require('jsonwebtoken');
 /* Cookie parser import for JWT Token cookie */
 const cookieParser = require('cookie-parser');
+/* npm package for git commands */
+const simpleGit = require('simple-git');
+simpleGit().clean(simpleGit.CleanOptions.FORCE);
 /* https/fs import for SSL cert/key */
 const https = require('https');
 const fs = require('fs-extra')
@@ -30,53 +33,7 @@ const cred = {
     cert,
 }
 
-const simpleGit = require('simple-git');
-simpleGit().clean(simpleGit.CleanOptions.FORCE);
 
-async function gitclone(repoPath){
-    const git = simpleGit();
-    try{
-        const ans = await git.clone(repoPath)
-        const foldername = repoPath.split("/").pop()
-        const folderObject = await getFolderObject(foldername)
-        await deleteRepositoryFolder(foldername)
-        return folderObject
-    } catch (err){
-        console.log("error ", err)
-    }
-}
-// const code = gitclone("https://github.com/rtyley/small-test-repo")
-// const code = gitclone("https://github.com/ShaneYokota72/TicTacToe-game")
-
-async function getFolderObject(folderPath) {
-    const folderObject = {};
-    const files = await fs.readdir(folderPath);
-  
-    for (const file of files) {
-      const filePath = `${folderPath}/${file}`;
-      const fileStats = await fs.stat(filePath);
-      // make a list of files to ignore and make it cleaner
-      if(file === ".git"){
-        continue;
-      } else if(file === "node_modules"){
-        continue;
-      } else if(file === ".DS_Store"){
-        continue;
-      }
-      if (fileStats.isDirectory()) {
-        const subfolderData = await getFolderObject(filePath);
-        folderObject[file] = subfolderData;
-      } else if (fileStats.isFile()) {
-        const fileContent = await fs.readFile(filePath, 'utf-8');
-        folderObject[file] = fileContent;
-      }
-    }
-  
-    return folderObject;
-  }
-  async function deleteRepositoryFolder(repoPath) {
-    await fs.remove(repoPath);
-  }
 
 /* Socket.io related imports */
 /* * * * UNCOMMENT FOR AWS * * * * * */
@@ -314,6 +271,63 @@ app.get('/api/roomopen/:id', async (req, res)=>{
     const datalimit = req.params.id;
     const rooms = await Room.find({public:true}).sort({createdAt:-1}).limit(datalimit);
     res.json(rooms);
+})
+
+async function getFolderObject(folderPath) {
+    const folderObject = {};
+    const files = await fs.readdir(folderPath);
+  
+    for (const file of files) {
+      const filePath = `${folderPath}/${file}`;
+      const fileStats = await fs.stat(filePath);
+      // make a list of files to ignore and make it cleaner
+      if(file === ".git"){
+        continue;
+      } else if(file === "node_modules"){
+        continue;
+      } else if(file === ".DS_Store"){
+        continue;
+      }
+      if (fileStats.isDirectory()) {
+        const subfolderData = await getFolderObject(filePath);
+        folderObject[file] = subfolderData;
+      } else if (fileStats.isFile()) {
+        const fileContent = await fs.readFile(filePath, 'utf-8');
+        folderObject[file] = fileContent;
+      }
+    }
+  
+    return folderObject;
+  }
+async function deleteRepositoryFolder(repoPath) {
+    await fs.remove(repoPath);
+}
+
+async function gitclone(repoPath){
+    const git = simpleGit();
+    try{
+        const ans = await git.clone(repoPath)
+        const foldername = repoPath.split("/").pop()
+        const folderObject = await getFolderObject(foldername)
+        await deleteRepositoryFolder(foldername)
+        return folderObject
+    } catch (err){
+        console.log("error ", err)
+    }
+}
+
+app.post('/api/gitclone', async (req,res) => {
+    const {repoPath, roomid} = req.body;
+    const code = await gitclone(repoPath)
+    mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
+    const roomdoc = await Room.findById(roomid);
+    if(roomdoc === null){
+        res.status(404).json({message: "Room not found"});
+        return;
+    }
+    roomdoc.content = JSON.stringify(code);
+    await roomdoc.save();
+    res.status(200).json(roomdoc);
 })
 
 cron.schedule('* */2 * * *', async () => {
