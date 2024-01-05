@@ -67,8 +67,8 @@ io.on('connection', socket => {
         socket.join(roomid);
         socket.to(roomid).emit('user-connected', name);
     })
-    socket.on('send-changes', (delta, roomid) => {
-        socket.to(roomid).emit('receive-changes', delta);
+    socket.on('send-changes', (delta, roomid, filename) => {
+        socket.to(roomid).emit('receive-changes', delta, filename);
     })
     socket.on('send-message', (msg, roomid) => {
         // console.log("msg", msg)
@@ -168,7 +168,7 @@ app.post('/api/createroom', async (req, res)=>{
             public: ispublic,
             tag: tags,
             desc: desc,
-            content: '',
+            content: {},
         })
         res.json(newRoom);
     } catch (error) {
@@ -225,7 +225,7 @@ app.put('/api/save/:id', async (req, res)=>{
         res.status(404).json({message: "Room not found"});
         return;
     }
-    roomdoc.content = content;
+    roomdoc.content = content; // change
     await roomdoc.save();
     res.json(roomdoc);
 })
@@ -237,7 +237,7 @@ app.get('/api/room/:id', async (req, res) => {
       if (!room) {
         return res.status(404).json({ error: 'Room not found' });
       }
-      res.json({content:room.content, creater:room.creater});
+      res.json({content:room.content, creater:room.creater});// change
     } catch (error) {
       res.status(500).json({ error: 'Internal server error' });
     }
@@ -261,7 +261,7 @@ app.post('/api/room', async (req, res)=>{
         public: ispublic,
         tag: tag,
         desc: desc,
-        content: '',
+        content: {},
     });
     res.json({roomid: newRoom._id});
 })
@@ -298,7 +298,8 @@ async function getFolderObject(folderPath) {
     }
   
     return folderObject;
-  }
+}
+
 async function deleteRepositoryFolder(repoPath) {
     await fs.remove(repoPath);
 }
