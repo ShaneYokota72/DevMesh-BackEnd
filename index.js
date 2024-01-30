@@ -37,15 +37,15 @@ const cred = {
 
 /* Socket.io related imports */
 /* * * * UNCOMMENT FOR AWS * * * * * */
-// const server = https.createServer(cred,app);
+const server = https.createServer(cred,app);
 /* * * * * * * * * * * * * * * * * * */
 
 /* * * * UNCOMMENT FOR LOCAL * * * * * */
-const http = require('http');
-const server = http.createServer(app);
+// const http = require('http');
+// const server = http.createServer(app);
 /* * * * * * * * * * * * * * * * * * */
 const { Server } = require('socket.io');
-const port = process.env.SOCKETIO_PORT || 8000
+const port = process.env.SOCKETIO_PORT || 8080
 const socketiopath = process.env.SOCKETIO_PATH || ''
 app.set('port', port);
 
@@ -69,6 +69,9 @@ io.on('connection', socket => {
     })
     socket.on('send-changes', (delta, roomid, filename) => {
         socket.to(roomid).emit('receive-changes', delta, filename);
+    })
+    socket.on('just-cloned', (delta, roomid) => {
+        socket.to(roomid).emit('receive-clone', delta);
     })
     socket.on('send-message', (msg, roomid) => {
         // console.log("msg", msg)
@@ -308,8 +311,11 @@ async function gitclone(repoPath){
     const git = simpleGit();
     try{
         const ans = await git.clone(repoPath)
+        // get git repo name to find the folder in the server
         const foldername = repoPath.split("/").pop()
+        // get repo info as a object
         const folderObject = await getFolderObject(foldername)
+        // delete the folder after getting the object
         await deleteRepositoryFolder(foldername)
         return folderObject
     } catch (err){
@@ -326,7 +332,7 @@ app.post('/api/gitclone', async (req,res) => {
         res.status(404).json({message: "Room not found"});
         return;
     }
-    roomdoc.content = JSON.stringify(code);
+    roomdoc.content = code;
     await roomdoc.save();
     res.status(200).json(roomdoc);
 })
@@ -343,12 +349,12 @@ server.listen(port);
 
 // api port
 /* * * * * * * * UNCOMMENT FOR AWS DEVELOPMENT * * * * * * * * */
-// const httpsServer = https.createServer(cred, app);
-// httpsServer.listen(process.env.API_PORT);
+const httpsServer = https.createServer(cred, app);
+httpsServer.listen(process.env.API_PORT);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * UNCOMMENT FOR Local DEVELOPMENT * * * * * * * * */
-app.listen(process.env.API_PORT);
+// app.listen(process.env.API_PORT);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 module.exports = app;
