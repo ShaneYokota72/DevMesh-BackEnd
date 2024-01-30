@@ -7,7 +7,7 @@ const RoomSchema = new Schema({
     public: Boolean,
     tag: String,
     desc: String,
-    content: String,
+    content: Object,
 }, {
     timestamps: true,  
 });
