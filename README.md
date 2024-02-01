@@ -16,6 +16,11 @@ Back-End Code: this repo
 ![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)
 
 # Features 📈
+
+* Github Repo Clone
+    * Clone your Github repo to the platform and start collaborating with 1 click 🚀
+* Download All files
+    * Download all the files in the room to work on local environment easily 😎
 * Collaborative Room Create/Join
 * Collaborative Coding
     * Real-time code sharing
@@ -29,5 +34,5 @@ Back-End Code: this repo
 If you have any suggestions, please feel free to open an issue/contact me at ```shaneyok@usc.edu```
 
 # License & Copyright
-- © 2023 - Shane Yokota
+- © 2024 - Shane Yokota
 - Licensed under the MIT License.
