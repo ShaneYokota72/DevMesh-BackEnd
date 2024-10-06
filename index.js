@@ -36,16 +36,16 @@ const cred = {
 
 /* Socket.io related imports */
 /* * * * UNCOMMENT FOR AWS * * * * * */
-const server = https.createServer(cred,app);
+// const server = https.createServer(cred,app);
 /* * * * * * * * * * * * * * * * * * */
 
 /* * * * UNCOMMENT FOR LOCAL * * * * * */
-// const http = require('http');
-// const server = http.createServer(app);
+const http = require('http');
+const server = http.createServer(app);
 /* * * * * * * * * * * * * * * * * * */
 const { Server } = require('socket.io');
-const port = process.env.SOCKETIO_PORT || 8080
-const socketiopath = process.env.SOCKETIO_PATH || ''
+const port = process.env.API_PORT || 4000
+const socketiopath = process.env.SOCKET_PORT || 8000
 app.set('port', port);
 
 
@@ -54,14 +54,13 @@ app.use(express.json());
 app.use(cookieParser());
 
 const io = new Server(server, {
-    path: socketiopath,
     cors:{
         origin: '*',
     }
 });
 
 io.on('connection', socket => {
-    // console.log('🔥: A user connected')
+    console.log('🔥: A user connected')
     socket.on('join-room', (roomid, name) => { 
         socket.join(roomid);
         socket.to(roomid).emit('user-connected', name);
@@ -164,12 +163,13 @@ app.post('/api/createroom', async (req, res)=>{
     const {creater, creatername, ispublic, tags, desc} = req.body;
     mongoose.connect(process.env.MONGODB_CONNECTION_STRING);
     try {
+        const user = await User.findById(creater);
         const newRoom = await Room.create({
-            creater: creater,
-            creatername: creatername,
+            creater: user._id,
+            creatername,
             public: ispublic,
             tag: tags,
-            desc: desc,
+            desc,
             content: {},
         })
         res.json(newRoom);
@@ -344,16 +344,16 @@ cron.schedule('* */2 * * *', async () => {
 });
 
 // socketio port
-server.listen(port);
+server.listen(process.env.SOCKET_PORT);
 
 // api port
 /* * * * * * * * UNCOMMENT FOR AWS DEVELOPMENT * * * * * * * * */
-const httpsServer = https.createServer(cred, app);
-httpsServer.listen(process.env.API_PORT);
+// const httpsServer = https.createServer(cred, app);
+// httpsServer.listen(process.env.API_PORT);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* * * * * * * * UNCOMMENT FOR Local DEVELOPMENT * * * * * * * * */
-// app.listen(process.env.API_PORT);
+app.listen(process.env.API_PORT);
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 module.exports = app;
